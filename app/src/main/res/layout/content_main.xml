@@ -1,0 +1,69 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+    android:id="@+id/layout_1"
+
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+
+        android:id="@+id/content"
+
+        android:layout_width="wrap_content"
+
+        android:layout_height="match_parent"
+
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:orientation="vertical">
+
+        <TextView
+
+            android:id="@+id/txtResult"
+
+            android:layout_width="wrap_content"
+
+            android:layout_height="wrap_content"
+
+            android:layout_gravity="right"
+
+            android:contentDescription="@string/welcome_message"
+
+            android:text="Welcome!"
+            android:textAppearance="@android:style/TextAppearance.Theme.Dialog" />
+
+        <LinearLayout
+
+            android:id="@+id/contentWithBackground"
+
+            android:layout_width="wrap_content"
+
+            android:layout_height="wrap_content"
+
+            android:layout_gravity="right"
+
+            android:background="@drawable/in_message_bg"
+
+            android:orientation="vertical"
+
+            android:paddingBottom="10dp"
+
+            android:paddingLeft="10dp">
+
+            <TextView
+
+                android:id="@+id/txtMessage"
+
+                android:layout_width="11dp"
+
+                android:layout_height="wrap_content"
+
+                android:maxWidth="240dp"
+
+                android:textColor="@android:color/black" />
+
+        </LinearLayout>
+
+
+    </LinearLayout>
+</RelativeLayout>
