@@ -26,7 +26,7 @@ public class StateObject implements Parcelable {
     public static final int FINISH_STATE_CONFIRMED=64;
     public static final String EMP_ID_PROMPT = "What is your ID?";
     public static final String STORE_ID_PROMPT = "What is your Store ID?";
-    public static final String PRODUCT_ID_PROMPT = "Scan Product ID?";
+    public static final String PRODUCT_ID_PROMPT = "Scan Product ID? ";
     public static final String QUANTITY_PROMPT = "What is the quantity for the Product ID?";
     public static final String CONFIRMED_TEXT = "Is that right?";
     public static final String NUMBER_FORMAT_ERROR_TEXT = "Sorry it does not look like digits. Please say like one two three, slowly.";
@@ -72,7 +72,7 @@ public class StateObject implements Parcelable {
                 break;
             case SCAN_PRODUCT_STATE :
                 r = "Current product ID is ";
-                r += Integer.toString(obj.curr_prod_id);
+                r += ParseDigitInput.longDigitToString(obj.curr_prod_id);
                 r += ", ";
                 r += CONFIRMED_TEXT;
                 break;
@@ -177,6 +177,13 @@ public class StateObject implements Parcelable {
         }
         if (confirm_state == 1 && isWrongString(text))
         {
+            if (state == SCAN_QUANTITY_STATE) {
+                int lastIndex = inventoryObj.products_list.size() - 1;
+                if (lastIndex >= 0) {
+                    inventoryObj.products_list.remove(lastIndex);
+                    inventoryObj.quantity_list.remove(lastIndex);
+                }
+            }
             return false;
         }
         if (isFinishString(text)) {
@@ -195,13 +202,14 @@ public class StateObject implements Parcelable {
                     Log.e("StateObj, storeid", Integer.toString(inventoryObj.store_id));
                     break;
                 case SCAN_PRODUCT_STATE:
-                    inventoryObj.curr_prod_id = ParseDigitInput.parseInt(text);
-                    Log.e("StateObj, productid", Integer.toString(inventoryObj.curr_prod_id));
-                    inventoryObj.products_list.add(inventoryObj.curr_prod_id);
+                    inventoryObj.curr_prod_id = text;
+                    Log.e("StateObj, productid", inventoryObj.curr_prod_id);
+
                     break;
                 case SCAN_QUANTITY_STATE:
                     inventoryObj.curr_quantity = ParseDigitInput.parseInt(text);
                     Log.e("StateObj, quantity", Integer.toString(inventoryObj.curr_quantity));
+                    inventoryObj.products_list.add(inventoryObj.curr_prod_id);
                     inventoryObj.quantity_list.add(inventoryObj.curr_quantity);
                     break;
 
@@ -209,6 +217,7 @@ public class StateObject implements Parcelable {
             }
             return true;
         }catch(NumberFormatException ex) {
+            Log.e("StateObject", ex.toString());
             return false;
         }
     }

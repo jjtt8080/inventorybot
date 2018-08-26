@@ -1,4 +1,5 @@
 package com.gegejiejie.inventory;
+
 import android.util.Log;
 
 import java.util.HashMap;
@@ -34,6 +35,14 @@ public class ParseDigitInput {
         }
         Log.e("ParseDigitInput:parseInt", r);
         return Integer.parseInt(r);
+    }
+    public static String longDigitToString(final String origString) {
+       String returnS = "" ;
+       for (int i = 0 ;i < origString.length(); ++i) {
+           returnS += origString.charAt(i);
+           returnS += " ";
+       }
+        return returnS;
     }
 }
 

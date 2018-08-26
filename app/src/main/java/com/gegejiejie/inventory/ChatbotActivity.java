@@ -1,17 +1,17 @@
 package com.gegejiejie.inventory;
 
 import android.Manifest;
-import android.app.Service;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.os.Bundle;
-import android.os.IBinder;
+import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
-import android.speech.tts.UtteranceProgressListener;
+import android.speech.tts.TextToSpeech.OnInitListener;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
@@ -23,19 +23,23 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.speech.RecognitionListener;
+
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import android.speech.tts.TextToSpeech.OnInitListener;
 
+import static android.speech.SpeechRecognizer.ERROR_NO_MATCH;
+import static android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT;
 
-public class ChatbotActivity extends AppCompatActivity implements OnInitListener, RecognitionListener {
+public class ChatbotActivity extends AppCompatActivity implements
+        OnInitListener, RecognitionListener, View.OnClickListener, AsyncListener {
 
     private static final int REQUEST_RECORD_PERMISSION = 100;
     public static final int PARTIAL_RESULTS_MAX = 5;
+    protected static final int CHATBOT_REQUEST_CODE = 10;
+    protected static final String NUM_RECORDS = "NUM_RECORDS";
     private EditText messageET;
     private ListView messagesContainer;
     private ImageView sendBtn;
@@ -58,6 +62,9 @@ public class ChatbotActivity extends AppCompatActivity implements OnInitListener
     private boolean bFinishSpeaking = false;
     Object mSyncStartToken = new Object();
     Object mSyncStopToken = new Object();
+    BluetoothConnect connectTask;
+    static private SqliteDatabaseObject db = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -95,7 +102,7 @@ public class ChatbotActivity extends AppCompatActivity implements OnInitListener
         mTalker = AndroidTextToSpeech.getInstance(this, this.getCallingPackage(), this, mSyncStartToken, mSyncStopToken);
     }
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        onRequestPermissionsResult(requestCode, permissions, grantResults);
+
         Log.e(TAG, "onRequestPermissionsResult");
         switch (requestCode) {
             case REQUEST_RECORD_PERMISSION:
@@ -118,27 +125,15 @@ public class ChatbotActivity extends AppCompatActivity implements OnInitListener
         companionLabel.setText("InventoryBot");// Hard Coded
         loadDummyHistory();
 
-        sendBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String messageText = messageET.getText().toString();
-                if (TextUtils.isEmpty(messageText)) {
-                    return;
-                }
-
-                ChatMessage chatMessage = new ChatMessage();
-                chatMessage.setId(122);//dummy
-                chatMessage.setMessage(messageText);
-                chatMessage.setDate(DateFormat.getDateTimeInstance().format(new Date()));
-                chatMessage.setMe(true);
-
-                messageET.setText("");
-
-                displayMessage(chatMessage);
-            }
-        });
+        sendBtn.setOnClickListener(this);
     }
+    private void initBluetoothThread() {
+        if (connectTask == null) {
+            connectTask = new BluetoothConnect(this);
+            connectTask.execute("");
+        }
 
+    }
     public void displayMessage(ChatMessage message) {
         adapter.add(message);
         adapter.notifyDataSetChanged();
@@ -200,7 +195,7 @@ public class ChatbotActivity extends AppCompatActivity implements OnInitListener
         super.onPause();
         Log.e("ChatbotActivity", "onPause");
         stopListening();
-        mTalker.Stop();
+        //mTalker.Stop();
 
     }
     @Override
@@ -298,22 +293,35 @@ public class ChatbotActivity extends AppCompatActivity implements OnInitListener
         } else {
             String answerText = stateObj.getAnswerText();
             chatMsg = new ChatMessage(true, answerText, 0);
-            displayMessage(chatMsg);
+            //displayMessage(chatMsg);
             boolean bValid = validateResult(answerText);
 
             if (!bValid) {
-                Log.e("ChatbotActivity", "Invalid input, reinput");
+                Log.e("ChatbotActivity", "Invalid input.");
             }
             if (stateObj.getState() == StateObject.FINISH_STATE_CONFIRMED && stateObj.getConfirmedState() == 0) {
                 //txtView.setText(inventoryObj.toString());
                 // Display the result
-                chatMsg = new ChatMessage(false, inventoryObj.toString(), 0);
+                chatMsg = new ChatMessage(false, "Save the data now.....", 0);
                 displayMessage(chatMsg);
             }
             if (stateObj.getState() == StateObject.FINISH_STATE_CONFIRMED) {
                 bFinished = true;
                 stopListening();
                 bStart = false;
+                if (db == null) {
+                    db =  SqliteDatabaseObject.getInstance(this);
+                }
+                db.Update(inventoryObj);
+                String[] queryNumProducts = {SqliteDatabaseObject.HistoryColumns.COLUMN_NAME_DATE, SqliteDatabaseObject.HistoryColumns.COLUMN_NAME_EMPLOYEE_ID,
+                        SqliteDatabaseObject.HistoryColumns.COLUMN_NAME_PRODUCT_QUANTITY};
+                Cursor cursorObj = db.query(SqliteDatabaseObject.HistoryColumns.TABLE_NAME, queryNumProducts, null);
+                int rowCount =  cursorObj.getCount();
+                Log.e(TAG, "cursor after update" + String.valueOf(rowCount));
+
+                Intent returnIntent = new Intent();
+                returnIntent.putExtra(NUM_RECORDS, inventoryObj.products_list.size());
+                setResult(Activity.RESULT_OK, returnIntent);
                 finish();
                 return;
             }
@@ -324,11 +332,18 @@ public class ChatbotActivity extends AppCompatActivity implements OnInitListener
         try {
 
             promptSpeech(null, true);
+            initBluetoothThread();
+
             // check that it is the SecondActivity with an OK result
             synchronized (mSyncStopToken) {
                 if (!mTalker.isDone()) {
                     Log.e(TAG + " Main", "wait");
-                    mSyncStopToken.wait();
+                    mSyncStopToken.wait(5000);
+                }
+                if (!mTalker.isDone()) {
+                    Toast.makeText(this, "Text to Speech has not finished yet!", Toast
+                            .LENGTH_SHORT).show();
+
                 }
             }
             Log.e(TAG, String.valueOf(mTalker.isDone()));
@@ -343,7 +358,8 @@ public class ChatbotActivity extends AppCompatActivity implements OnInitListener
     }
 
     public void stopListening() {
-        mListener.stopListening();
+        if (mListener != null)
+            mListener.stopListening();
 
     }
 
@@ -381,8 +397,9 @@ public class ChatbotActivity extends AppCompatActivity implements OnInitListener
                 return "RecognitionService busy";
             case SpeechRecognizer.ERROR_SERVER:
                 return "error from server";
-            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+            case ERROR_SPEECH_TIMEOUT:
                 return "No speech input";
+
             default:
                 return "Didn't understand, please try again.";
         }
@@ -409,9 +426,20 @@ public class ChatbotActivity extends AppCompatActivity implements OnInitListener
 
     public void onError(int error) {
         Log.d(TAG, "error " + error);
+
         String errorText = getErrorText(error);
         //txtView = findViewById(R.id.txtMessage);
         //txtView.setText("error " + errorText);
+        if (error == ERROR_NO_MATCH || error == ERROR_SPEECH_TIMEOUT) {
+            //Check if user typed in something
+            String messageText = messageET.getText().toString();
+            if (TextUtils.isEmpty(messageText)) {
+                return;
+            }
+            else {
+                onClick(messageET);
+            }
+        }
     }
 
     public void onEvent(int eventType, Bundle params)
@@ -506,7 +534,47 @@ public class ChatbotActivity extends AppCompatActivity implements OnInitListener
             mTalker.destroy();
             Log.d(TAG, "TTS Destroyed");
         }
+        if (connectTask != null) {
+            connectTask.cancel(true);
+
+        }
         super.onDestroy();
     }
 
+    @Override
+    public void onClick(View view) {
+
+        String messageText = messageET.getText().toString();
+        if (TextUtils.isEmpty(messageText)) {
+            return;
+        }
+        ChatMessage chatMessage = new ChatMessage();
+        chatMessage.setId(122);//dummy
+        chatMessage.setMessage(messageText);
+        chatMessage.setDate(DateFormat.getDateTimeInstance().format(new Date()));
+        chatMessage.setMe(true);
+
+        messageET.setText("");
+
+        displayMessage(chatMessage);
+        stateObj.setAnswerText(messageText);
+        validateResultAndSetState();
+        stopListening();
+        Main();
+
+    }
+
+    @Override
+    public void processResult(String output) {
+        if (messageET != null && output != null && output.length() > 0) {
+            String originalText = messageET.getText().toString();
+            if (originalText.isEmpty()) {
+                messageET.setText(output);
+            }else {
+                messageET.setText(originalText + output);
+
+            }
+            onClick(messageET);
+        }
+    }
 }

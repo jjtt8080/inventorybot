@@ -1,23 +1,17 @@
 package com.gegejiejie.inventory;
-import java.util.Locale;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-
-import android.content.Intent;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
-import android.util.Log;
-
-import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity
@@ -93,14 +87,16 @@ public class MainActivity extends AppCompatActivity
         //txtView = (TextView) findViewById(R.id.txtResult);
         if (id == R.id.nav_import) {
             Intent intent = new Intent(this, ChatbotActivity.class);
-            startActivity(intent);
+            startActivityForResult(intent, ChatbotActivity.CHATBOT_REQUEST_CODE);
         } else if (id == R.id.nav_gallery) {
-
+            startProductsActivity();
         } else if (id == R.id.nav_slideshow) {
-
+            startHistoryActivity();
         } else if (id == R.id.nav_manage) {
 
+
         } else if (id == R.id.nav_share) {
+            startShareAction();
 
         } else if (id == R.id.nav_send) {
 
@@ -110,6 +106,56 @@ public class MainActivity extends AppCompatActivity
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
+    protected void startHistoryActivity() {
+        Intent history_intent = new Intent(this, HistoryActivity.class);
+        startActivity(history_intent);
+    }
+    protected void startProductsActivity() {
+        Intent product_intent = new Intent(this, ProductsActivity.class);
+        startActivity(product_intent);
+    }
+    protected void startShareAction() {
+        Intent sendIntent = new Intent();
+        sendIntent.setAction(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, "This is my text to send.");
+        sendIntent.setType("text/plain");
+        try {
+            Uri uri = TableBrowsingUtil.exportAsFile("Products", this, ",");
+            sendIntent.putExtra(Intent.EXTRA_STREAM, uri);
+        } catch(Exception ex) {
+            Log.e("Main", "Error storing file");
+            ex.printStackTrace();
 
+            Toast.makeText(this, "Error storing file", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
+        sendIntent.putExtra(Intent.EXTRA_SUBJECT,
+                "Sharing File...");
+        sendIntent.putExtra(Intent.EXTRA_TEXT, "Sharing File...");
+
+        startActivity(Intent.createChooser(sendIntent, getResources().getText(R.string.send_to)));
+    }
+    /**
+     * Dispatch incoming result to the correct fragment.
+     *
+     * @param requestCode
+     * @param resultCode
+     * @param data
+     */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == ChatbotActivity.CHATBOT_REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
+               int numRecords = data.getIntExtra(ChatbotActivity.NUM_RECORDS, 0);
+               if (numRecords > 0) {
+                   //Open the HistoryActivity product scanning history
+                   startProductsActivity();
+               }
+
+            }
+        }
+
+    }
 }
