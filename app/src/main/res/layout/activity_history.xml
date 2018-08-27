@@ -6,4 +6,17 @@
     android:layout_height="match_parent"
     tools:context=".HistoryActivity">
 
+
+    <TableLayout
+        android:id="@+id/history_tablelayout"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:gravity="center_horizontal"
+        android:stretchColumns="*"
+        tools:layout_editor_absoluteX="5dp"
+        tools:layout_editor_absoluteY="5dp"
+        tools:shrinkColumns="*">
+
+
+    </TableLayout>
 </android.support.constraint.ConstraintLayout>
