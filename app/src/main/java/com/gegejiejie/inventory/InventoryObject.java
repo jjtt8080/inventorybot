@@ -2,18 +2,15 @@ package com.gegejiejie.inventory;
 
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.provider.BaseColumns;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import android.provider.BaseColumns;
 
 public class InventoryObject implements Parcelable {
     protected int emp_id = -1;
     protected int store_id = -1;
-    protected int curr_prod_id = -1;
+    protected String curr_prod_id = "";
     protected int curr_quantity = 0;
-    protected ArrayList<Integer> products_list = new ArrayList<Integer>();
+    protected ArrayList<String> products_list = new ArrayList<String>();
     protected ArrayList<Integer> quantity_list = new ArrayList<Integer>();
     protected InventoryObject() {}
 
@@ -25,22 +22,23 @@ public class InventoryObject implements Parcelable {
         r += "You have \"" + Integer.toString(products_list.size()) + " \" products." + "\n";
         for (int i = 0; i < products_list.size(); ++i)
         {
-            int productid = products_list.get(i);
+            String productid = products_list.get(i);
             int quantity = quantity_list.get(i);
-            r += "Product ID \"" + Integer.toString(productid) + "\"";
+            r += "Product ID \"" + ParseDigitInput.longDigitToString(productid) + "\"";
             r += ", Quantity \"" + Integer.toString(quantity) + "\"";
             r += "\n";
         }
         return r;
     }
+
     public String ProdQuantToString()
     {
-        String r = null;
+        String r = "";
         for (int i = 0; i < products_list.size(); ++i)
         {
-            int productid = products_list.get(i);
+            String productid = products_list.get(i);
             int quantity = quantity_list.get(i);
-            r += Integer.toString(productid);
+            r += productid;
             r += "," + Integer.toString(quantity);
             r += ";";
         }
@@ -57,7 +55,7 @@ public class InventoryObject implements Parcelable {
     public void writeToParcel(Parcel out, int flags) {
         out.writeInt(emp_id);
         out.writeInt(store_id);
-        out.writeInt(curr_prod_id);
+        out.writeString(curr_prod_id);
         out.writeInt(curr_quantity);
         out.writeList(products_list);
         out.writeList(quantity_list);
@@ -78,7 +76,7 @@ public class InventoryObject implements Parcelable {
     private InventoryObject(Parcel in) {
         emp_id = in.readInt();
         store_id = in.readInt();
-        curr_prod_id = in.readInt();
+        curr_prod_id = in.readString();
         curr_quantity = in.readInt();
         in.readList(products_list, null);
         in.readList(quantity_list, null);
