@@ -14,5 +14,8 @@
     <string name="button_speak">ButtonSpeak</string>
     <string name="button_content">Speak</string>
     <string name="chat">Chat</string>
+    <string name="history">History</string>
+    <string name="products">Products</string>
+    <string name="send_to">Send to</string>
     <string name="welcome_message">Welcome to the inventory bot! Please tap Scan to start scanning your product.</string>
 </resources>
